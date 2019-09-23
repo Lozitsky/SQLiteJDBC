@@ -1,0 +1,6 @@
+D:/Downloads/Батиршинов/3.Базы данных и SQL в Java/CarShop.db
+SELECT * from dir_Make;SELECT * from dir_CarType;
+SELECT * from dir_Color;
+SELECT * from
+
+ dir_Model;

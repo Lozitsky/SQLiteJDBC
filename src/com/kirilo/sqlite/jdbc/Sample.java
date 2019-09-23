@@ -1,3 +1,5 @@
+package com.kirilo.sqlite.jdbc;
+
 import java.sql.*;
 
 public class Sample {
