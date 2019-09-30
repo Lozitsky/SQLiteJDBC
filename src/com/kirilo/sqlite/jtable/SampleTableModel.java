@@ -9,17 +9,25 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class SampleTableModel extends AbstractTableModel {
+    private static Connection connection;
     private Object[][] data;
     private String[] columnNames;
-//    private Class[] columnTypes;
+    private String tableName;
+    //    private Class[] columnTypes;
 
     public SampleTableModel(Connection connection, String tableName) throws SQLException {
 //        super();
-        getTableContents(connection, tableName);
+        this.connection = connection;
+        this.tableName = tableName;
+        getTableContents();
     }
 
-    private void getTableContents(Connection connection, String tableName) throws SQLException {
-        TreeMap<String, Class> columnNameAndType = getColumnNameAndType(connection, tableName);
+    public String getTableName() {
+        return tableName;
+    }
+
+    private void getTableContents() throws SQLException {
+        TreeMap<String, Class> columnNameAndType = getColumnNameAndType();
         columnNames = new String[columnNameAndType.size()];
         columnNameAndType.navigableKeySet().toArray(columnNames);
         Statement statement = connection.createStatement();
@@ -65,7 +73,7 @@ public class SampleTableModel extends AbstractTableModel {
         }
     }
 
-    private TreeMap<String, Class> getColumnNameAndType(Connection connection, String tableName) throws SQLException {
+    private TreeMap<String, Class> getColumnNameAndType() throws SQLException {
         DatabaseMetaData metaData = connection.getMetaData();
         ResultSet resultSet = metaData.getColumns(null, null, tableName, null);
         TreeMap<String, Class> columnNamesTypes = new TreeMap<>();
@@ -98,6 +106,85 @@ public class SampleTableModel extends AbstractTableModel {
         return columnNamesTypes;
     }
 
+    public boolean updateDB() {
+        List<String> list = new ArrayList<>();
+        for (int i = 0; i < data.length; i++) {
+            Object[] objects = data[i];
+            StringBuilder exec = new StringBuilder("update " + tableName + " set ");
+            int id = 0;
+            for (int j = 0; j < objects.length - 1; j++) {
+                if (columnNames[j].equals("id")) {
+                    id = (int) objects[j];
+                    continue;
+                }
+
+
+                exec.append(columnNames[j]);
+                exec.append("='");
+                if (!isNotCorrectDescription(objects, exec, j)) {
+                    exec.append(objects[j]);
+                }
+                exec.append("', ");
+            }
+            exec.append(columnNames[objects.length - 1]);
+            exec.append("='");
+            exec.append(objects[objects.length - 1]);
+            exec.append("' where id=");
+            exec.append(id);
+            exec.append(";");
+
+            list.add(exec.toString());
+        }
+
+        Statement statement = null;
+        try {
+            statement = connection.createStatement();
+
+            for (String sql : list) {
+                try {
+                    statement.executeUpdate(sql);
+
+                } catch (SQLException e) {
+                    Logger.getLogger(SampleTableModel.class.getName()).log(Level.SEVERE, "Can't execute update!", e);
+                    return false;
+                } finally {
+                    Logger.getLogger(SampleTableModel.class.getName()).log(Level.INFO, sql);
+                    if (statement != null) {
+                        statement.close();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            Logger.getLogger(SampleTableModel.class.getName()).log(Level.SEVERE, "Can't create statement!", e);
+            return false;
+        } finally {
+            try {
+                if (statement != null) {
+                    statement.close();
+                }
+            } catch (SQLException e) {
+                Logger.getLogger(SampleTableModel.class.getName()).log(Level.SEVERE, "Can't close statement!", e);
+            }
+        }
+        return true;
+    }
+
+    private boolean isNotCorrectDescription(Object[] objects, StringBuilder exec, int j) {
+        if (columnNames[j].equals("description")) {
+            String description = (String) objects[j];
+            if (description.contains("'")) {
+                String[] strings = description.split("'");
+                for (int i = 0; i < strings.length - 1; i++) {
+                    exec.append(strings[i]);
+                    exec.append("''");
+                }
+                exec.append(strings[strings.length - 1]);
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public int getRowCount() {
         return data.length;
@@ -118,7 +205,33 @@ public class SampleTableModel extends AbstractTableModel {
     }
 
     @Override
+    public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
+        data[rowIndex][columnIndex] = aValue;
+        fireTableCellUpdated(rowIndex, columnIndex);
+    }
+
+    @Override
     public String getColumnName(int column) {
         return columnNames[column];
+    }
+
+    @Override
+    public boolean isCellEditable(int rowIndex, int columnIndex) {
+        if (columnIndex == findColumn("id")) {
+            return super.isCellEditable(rowIndex, columnIndex);
+        }
+        return true;
+    }
+
+    //    @Override
+    public Integer[] findColumns(String expression) {
+        ArrayList<Integer> list = new ArrayList<>();
+        for (int i = 0; i < getColumnCount(); i++) {
+            String columnName = getColumnName(i);
+            if (columnName.contains(expression)) {
+                list.add(i);
+            }
+        }
+        return list.toArray(new Integer[list.size()]);
     }
 }

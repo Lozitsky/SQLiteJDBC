@@ -1,5 +1,7 @@
 package com.kirilo.sqlite.jtable;
 
+import com.kirilo.sqlite.jdbc.Start;
+
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -25,5 +27,21 @@ public class SQLiteConnection {
             }
         }
         return connection;
+    }
+
+    public static void closeConnection() {
+        try {
+/*            if (statement != null) {
+                statement.close();
+            }
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }*/
+            if (connection != null) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            Logger.getLogger(Start.class.getName()).log(Level.SEVERE, "Can't close", e);
+        }
     }
 }
